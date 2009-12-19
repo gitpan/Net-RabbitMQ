@@ -4,7 +4,7 @@ require DynaLoader;
 
 use strict;
 use vars qw($VERSION @ISA);
-$VERSION = "0.0.1";
+$VERSION = "0.0.2";
 @ISA = qw/DynaLoader/;
 
 bootstrap Net::RabbitMQ $VERSION ;
@@ -41,7 +41,7 @@ and die on failure.
 
 =item new()
 
-  Creates a new Net::RabbitMQ object.
+Creates a new Net::RabbitMQ object.
 
 =item connect( $hostname, $options )
 
@@ -123,11 +123,13 @@ key that will bind the specified queue to the specified exchange.
 This is like the C<queue_bind> with respect to arguments.  This command
 unbinds the queue from the exchange.
 
-=item publish($channel, $routing_key, $options)
+=item publish($channel, $routing_key, $body, $options)
 
 C<$channel> is a channel that has been opened with C<channel_open>.
 
 C<$routing_key> is the name of the routing key for this message.
+
+C<$body> is the payload to enqueue.
 
 C<$options> is an optional hash respecting the following keys:
 
@@ -186,6 +188,24 @@ C<$queuename> is the queue to be purged.
 
 C<$no_wait> a boolean specifying if the call should not wait for
 the server to acknowledge the acknoledgement.
+
+=item tx_select($channel)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+Start a server-side (tx) transaction over $channel.
+
+=item tx_commit($channel)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+Commit a server-side (tx) transaction over $channel.
+
+=item tx_rollback($channel)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+Rollback a server-side (tx) transaction over $channel.
 
 =back
 
