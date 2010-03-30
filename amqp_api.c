@@ -3,6 +3,12 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+
+#include <config.h> /* Perl's CORE config */
+#ifndef USE_ITHREADS
+#define DISABLE_THREADS
+#endif
+
 #ifndef DISABLE_THREADS
 #include <pthread.h>
 #endif
@@ -295,7 +301,7 @@ amqp_tx_commit_ok_t *amqp_tx_commit(amqp_connection_state_t state,
   amqp_rpc_reply = amqp_get_rpc_reply();
   *amqp_rpc_reply =
     AMQP_SIMPLE_RPC(state, channel, TX, COMMIT, COMMIT_OK,
-		    amqp_tx_commit_t);
+		    amqp_tx_commit_t, channel);
   return RPC_REPLY(amqp_tx_commit_ok_t);
 }
 
@@ -307,6 +313,6 @@ amqp_tx_rollback_ok_t *amqp_tx_rollback(amqp_connection_state_t state,
   amqp_rpc_reply = amqp_get_rpc_reply();
   *amqp_rpc_reply =
     AMQP_SIMPLE_RPC(state, channel, TX, ROLLBACK, ROLLBACK_OK,
-		    amqp_tx_rollback_t);
+		    amqp_tx_rollback_t, channel);
   return RPC_REPLY(amqp_tx_rollback_ok_t);
 }
