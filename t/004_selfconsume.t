@@ -1,6 +1,7 @@
 use Test::More tests => 10;
 use strict;
 
+my $dtag=(unpack("L",pack("N",1)) != 1)?'0100000000000000':'0000000000000001';
 my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
 
 use_ok('Net::RabbitMQ');
@@ -30,8 +31,9 @@ is_deeply($rv,
           {
           'body' => 'Magic Transient Payload',
           'routing_key' => 'nr_test_q',
-          'delivery_tag' => '0100000000000000',
-          'exchange' => 'nr_test_x'
+          'delivery_tag' => $dtag,
+          'exchange' => 'nr_test_x',
+          'props' => {},
           }, "payload");
 
 1;
