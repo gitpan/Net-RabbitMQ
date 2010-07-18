@@ -1,3 +1,10 @@
+0.1.6 - Sun Jul 18 10:02:36 PDT 2010
+	* fix for uninitialized exchange when no options are passed.
+	* add consumer tags and docs
+	* add delete_exchange from Richard Wallman
+	* enhance delete_exchange with if_unused and nowait options
+		from Brian Clapper
+
 0.1.5 - Thu Apr 22 11:44:52 EDT 2010
 	* support for properties from Bob Goldstein < bobg at uic dot edu >
 	* retarded and seemingly futile attempt to compensate for no pack Q
