@@ -534,7 +534,7 @@ net_rabbitmq_get(conn, channel, queuename, options = NULL)
         rv = internal_recv(hv, conn, 1);
         if(rv <= 0) Perl_croak(aTHX_ "Bad frame read.");
       }
-      RETVAL = (SV *)newRV((SV *)hv);
+      RETVAL = (SV *)newRV_noinc((SV *)hv);
     }
     else
       RETVAL = &PL_sv_undef;
