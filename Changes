@@ -1,3 +1,7 @@
+0.1.7 - Sat Oct  9 09:10:31 EDT 2010
+	* amqp_exchange_delete prototype
+	* memory leak fix from Trevor Little
+
 0.1.6 - Sun Jul 18 10:02:36 PDT 2010
 	* fix for uninitialized exchange when no options are passed.
 	* add consumer tags and docs

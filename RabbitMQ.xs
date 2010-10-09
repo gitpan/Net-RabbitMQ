@@ -92,7 +92,7 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
 
     HV *props;
     props = newHV();
-    hv_store(RETVAL, "props", strlen("props"), newRV((SV *)props), 0);
+    hv_store(RETVAL, "props", strlen("props"), newRV_noinc((SV *)props), 0);
 
     p = (amqp_basic_properties_t *) frame.payload.properties.decoded;
     if (p->_flags & AMQP_BASIC_CONTENT_TYPE_FLAG) {
@@ -384,6 +384,7 @@ net_rabbitmq_recv(conn)
     int result = 0;
   CODE:
     RETVAL = newHV();
+    sv_2mortal((SV*)RETVAL);
     result = internal_recv(RETVAL, conn, 0);
     if(result <= 0) Perl_croak(aTHX_ "Bad frame read.");
   OUTPUT:
