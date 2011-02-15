@@ -1,6 +1,7 @@
-use Test::More tests => 5;
+use Test::More tests => 6;
 use strict;
 
+my $dtag=(unpack("L",pack("N",1)) != 1)?'0100000000000000':'0000000000000001';
 my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
 
 use_ok('Net::RabbitMQ');
@@ -12,7 +13,8 @@ eval { $mq->connect($host, { user => "guest", password => "guest" }); };
 is($@, '', "connect");
 eval { $mq->channel_open(1); };
 is($@, '', "channel_open");
-eval { $mq->exchange_delete(1, "nr_test_x", { if_unused => 0, nowait => 0 }); };
-is($@, '', "exchange_delete");
-
+my $qos = '';
+eval { $qos = $mq->basic_qos(1, { prefetch_count => 5 }); };
+is($@, '', "qos error");
+is($qos, undef, "qos");
 1;

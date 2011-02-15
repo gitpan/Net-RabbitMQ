@@ -1,3 +1,7 @@
+0.1.9 - Mon Feb 14 23:02:58 EST 2011
+	* add a basic return callback registration point
+	* add basic qos support
+
 0.1.8 - Sat Oct  9 11:11:36 EDT 2010
 	* missed a gratuitous memory leak somehow
 

@@ -58,6 +58,31 @@ void die_on_amqp_error(pTHX_ amqp_rpc_reply_t x, char const *context) {
   }
 }
 
+static void
+internal_brcb(amqp_channel_t channel, amqp_basic_return_t *m, void *vsv) {
+  HV *mp;
+  SV *sv = (SV *)vsv;
+  dSP;
+  ENTER;
+  SAVETMPS;
+  PUSHMARK(SP);
+  XPUSHs(sv_2mortal(newSViv(channel)));
+  mp = newHV();
+  hv_store(mp, "reply_code", strlen("reply_code"), newSViv(m->reply_code), 0);
+  hv_store(mp, "reply_text", strlen("reply_text"),
+           newSVpvn(m->reply_text.bytes, m->reply_text.len), 0);
+  hv_store(mp, "exchange", strlen("exchange"),
+           newSVpvn(m->exchange.bytes, m->exchange.len), 0);
+  hv_store(mp, "routing_key", strlen("routing_key"),
+           newSVpvn(m->routing_key.bytes, m->routing_key.len), 0);
+  XPUSHs(sv_2mortal((SV *)newRV((SV *)mp)));
+  PUTBACK;
+  call_sv(sv, G_DISCARD);
+  SPAGAIN;
+  PUTBACK;
+  FREETMPS;
+  LEAVE;
+}
 int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
   amqp_frame_t frame;
   amqp_basic_deliver_t *d;
@@ -210,6 +235,14 @@ net_rabbitmq_connect(conn, hostname, options)
     RETVAL = sockfd;
   OUTPUT:
     RETVAL
+
+void
+net_rabbitmq_basic_return(conn, code)
+  Net::RabbitMQ conn
+  SV *code
+  CODE:
+    SvREFCNT_inc(code);
+    amqp_set_basic_return_cb(conn, internal_brcb, code);
 
 void
 net_rabbitmq_channel_open(conn, channel)
@@ -617,3 +650,25 @@ net_rabbitmq_tx_rollback(conn, channel, args = NULL)
     amqp_tx_rollback(conn, channel, arguments);
     amqp_rpc_reply = amqp_get_rpc_reply();
     die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Rolling Back transaction");
+
+void
+net_rabbitmq_basic_qos(conn, channel, args = NULL)
+  Net::RabbitMQ conn
+  int channel
+  HV *args
+  PREINIT:
+    SV **v;
+    amqp_rpc_reply_t *amqp_rpc_reply;
+    uint32_t prefetch_size = 0;
+    uint16_t prefetch_count = 0;
+    amqp_boolean_t global = 0;
+  CODE:
+    if(args) {
+      if(NULL != (v = hv_fetch(args, "prefetch_size", strlen("prefetch_size"), 0))) prefetch_size = SvIV(*v);
+      if(NULL != (v = hv_fetch(args, "prefetch_count", strlen("prefetch_count"), 0))) prefetch_count = SvIV(*v);
+      if(NULL != (v = hv_fetch(args, "global", strlen("global"), 0))) global = SvIV(*v) ? 1 : 0;
+    }
+    amqp_basic_qos(conn, channel, 
+                   prefetch_size, prefetch_count, global);
+    amqp_rpc_reply = amqp_get_rpc_reply();
+    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Basic QoS");

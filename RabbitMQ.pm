@@ -4,7 +4,7 @@ require DynaLoader;
 
 use strict;
 use vars qw($VERSION @ISA);
-$VERSION = "0.1.8";
+$VERSION = "0.1.9";
 @ISA = qw/DynaLoader/;
 
 bootstrap Net::RabbitMQ $VERSION ;
@@ -275,6 +275,31 @@ Commit a server-side (tx) transaction over $channel.
 C<$channel> is a channel that has been opened with C<channel_open>.
 
 Rollback a server-side (tx) transaction over $channel.
+
+=item basic_qos($channel, $options)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+C<$options> is an optional hash respecting the following keys:
+
+     {
+       prefetch_count => $cnt,  #default 0
+       prefetch_size  => $size, #default 0
+       global         => $bool, #default 0
+     }
+
+Set quality of service flags on the current $channel.
+
+=item basic_return($channel, $subroutine)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+C<$subroutine> is a perl coderef that takes two arguments:
+
+     $channel is the channel on which information is being returned.
+
+     $m the message which is a hash ref containing reply_code,
+     reply_text, exchange, and routing_key.
 
 =back
 
