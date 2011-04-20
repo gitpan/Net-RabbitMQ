@@ -9,6 +9,8 @@ typedef amqp_connection_state_t Net__RabbitMQ;
 
 #define int_from_hv(hv,name) \
  do { SV **v; if(NULL != (v = hv_fetch(hv, #name, strlen(#name), 0))) name = SvIV(*v); } while(0)
+#define double_from_hv(hv,name) \
+ do { SV **v; if(NULL != (v = hv_fetch(hv, #name, strlen(#name), 0))) name = SvNV(*v); } while(0)
 #define str_from_hv(hv,name) \
  do { SV **v; if(NULL != (v = hv_fetch(hv, #name, strlen(#name), 0))) name = SvPV_nolen(*v); } while(0)
 
@@ -110,6 +112,7 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
     }
 
     result = amqp_simple_wait_frame(conn, &frame);
+    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) continue;
     if (result <= 0) break;
 
     if (frame.frame_type != AMQP_FRAME_HEADER)
@@ -218,9 +221,9 @@ net_rabbitmq_connect(conn, hostname, options)
     int channel_max = 0;
     int frame_max = 131072;
     int heartbeat = 0;
+    double timeout = -1;
+    struct timeval to;
   CODE:
-    die_on_error(aTHX_ sockfd = amqp_open_socket(hostname, port), "Opening socket");
-    amqp_set_sockfd(conn, sockfd);
     str_from_hv(options, user);
     str_from_hv(options, password);
     str_from_hv(options, vhost);
@@ -228,6 +231,14 @@ net_rabbitmq_connect(conn, hostname, options)
     int_from_hv(options, frame_max);
     int_from_hv(options, heartbeat);
     int_from_hv(options, port);
+    double_from_hv(options, timeout);
+    if(timeout >= 0) {
+     to.tv_sec = floor(timeout);
+     to.tv_usec = 1000000.0 * (timeout - floor(timeout));
+    }
+
+    die_on_error(aTHX_ sockfd = amqp_open_socket(hostname, port, (timeout<0)?NULL:&to), "Opening socket");
+    amqp_set_sockfd(conn, sockfd);
     die_on_amqp_error(aTHX_ amqp_login(conn, vhost, channel_max, frame_max,
                                        heartbeat, AMQP_SASL_METHOD_PLAIN,
                                        user, password),
@@ -307,7 +318,7 @@ net_rabbitmq_exchange_delete(conn, channel, exchange, options = NULL)
     amqp_rpc_reply = amqp_get_rpc_reply();
     die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Deleting exchange");
 
-SV *
+void
 net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL)
   Net::RabbitMQ conn
   int channel
@@ -322,7 +333,7 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
     int auto_delete = 1;
     amqp_table_t arguments = AMQP_EMPTY_TABLE;
     amqp_bytes_t queuename_b = AMQP_EMPTY_BYTES;
-  CODE:
+  PPCODE:
     if(queuename && strcmp(queuename, "")) queuename_b = amqp_cstring_bytes(queuename);
     if(options) {
       int_from_hv(options, passive);
@@ -335,9 +346,11 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
                                                     arguments);
     amqp_rpc_reply = amqp_get_rpc_reply();
     die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Declaring queue");
-    RETVAL = newSVpvn(r->queue.bytes, r->queue.len);
-  OUTPUT:
-    RETVAL
+    XPUSHs(sv_2mortal(newSVpvn(r->queue.bytes, r->queue.len)));
+    if(GIMME_V == G_ARRAY) {
+      XPUSHs(sv_2mortal(newSVuv(r->message_count)));
+      XPUSHs(sv_2mortal(newSVuv(r->consumer_count)));
+    }
 
 void
 net_rabbitmq_queue_bind(conn, channel, queuename, exchange, bindingkey, args = NULL)
@@ -611,6 +624,16 @@ net_rabbitmq_DESTROY(conn)
     sockfd = amqp_get_sockfd(conn);
     if(sockfd >= 0) close(sockfd);
     amqp_destroy_connection(conn);
+
+void
+net_rabbitmq_heartbeat(conn)
+  Net::RabbitMQ conn
+  PREINIT:
+  amqp_frame_t f;
+  CODE:
+    f.frame_type = AMQP_FRAME_HEARTBEAT;
+    f.channel = 0;
+    amqp_send_frame(conn, &f);
 
 void
 net_rabbitmq_tx_select(conn, channel, args = NULL)
